@@ -6,6 +6,8 @@ rm(list = ls());gc()
 
 #Test this comment
 
+#This comment is made in Visual studio code
+
 #Three Abadie paper cases:
 
 #---- Synth pretreatment function ---- 
