@@ -4,23 +4,19 @@ library(data.table)
 library(SCtools)
 rm(list = ls());gc()
 
-#Test this comment
-
-#This comment is made in Visual studio code
-
 #Three Abadie paper cases:
 
 #---- Synth pretreatment function ---- 
 scm_only_pretreatment <- function(dt, y_variable, unit, time_variable, pretreatment_period, post_treatment_period){
   unit_numeric = paste0(unit, "_numeric")
   years <- seq(min(pretreatment_period), max(pretreatment_period))
-  special_predictors2 <- lapply(years, function(year) {
+  outcome_lags_all <- lapply(years, function(year) {
     list(y_variable, year, "mean")
   })
   
   dataprep.out <- dataprep(
     foo = dt,
-    special.predictors = special_predictors2,
+    special.predictors = outcome_lags_all,
     dependent = y_variable,
     unit.variable = unit_numeric,
     time.variable = time_variable,
@@ -62,6 +58,8 @@ scm_only_pretreatment <- function(dt, y_variable, unit, time_variable, pretreatm
   
 }
 
+
+
 #---- Abadie 2003 Basque ----
 data("basque")
 basque = as.data.table(basque)
@@ -90,44 +88,12 @@ mspe.plot(placebo_res, discard.extreme = TRUE, mspe.limit = 20)
 
 
 #---- Abadie 2010 Tobocco ----
+
+#Load data California
 california_data_url = "https://raw.githubusercontent.com/causalify-code/synthetic-control-replications/refs/heads/main/california-tobacco-control-program/data-abadie-diamond-hainmueller-california-proposition-99-tobacco-control-program-synthetic-control.csv"
 california_dataframe = read.csv(california_data_url)
 
-california_dataframe = as.data.table(california_dataframe)
-california_dataframe[, state_numeric := as.numeric(state)]
-california_dataframe[, state := as.character(state)]
-
-california_dataframe[, treatment := ifelse(state_numeric == 3, 1,0)]
-
-treated_unit <- california_dataframe[treatment == 1, unique(state_numeric)]
-control_unit <- california_dataframe[treatment == 0, unique(state_numeric)]
-
-result_TruncHist = data.frame(Unit = numeric(), ate = numeric(), significance = numeric())
-years = 1970:1980
-for (year in years) {
-  scm_tobacco = scm_only_pretreatment(california_dataframe, y_variable = "cigsale", unit = "state",
-                                      time_variable = "year", pretreatment_period = year:1988, post_treatment_period = 1989:2000)
-  ate_tobacco = scm_tobacco$average_treatment
-  placebo_res = generate.placebos(scm_tobacco$dataprep_out, scm_tobacco$synth_out, Sigf.ipop = 3)
-  p_statistic = mspe.test(placebo_res, discard.extreme = FALSE)
-  p_value = p_statistic$p.val
-  result_TruncHist = rbind(result_TruncHist, data.frame(Unit = year, ate = ate_tobacco,  significance = p_value ))
-}
-
-scm_tobacco = scm_only_pretreatment(california_dataframe, y_variable = "cigsale", unit = "state",
-                                    time_variable = "year", pretreatment_period = 1980:1988, post_treatment_period = 1989:2000)
-scm_tobacco$average_treatment
-
-
-
-#In-Space Placebo test:
-placebo_res = generate.placebos(scm_tobacco$dataprep_out, scm_tobacco$synth_out, Sigf.ipop = 3)
-plot_placebos(placebo_res, discard.extreme = FALSE)
-p_value = mspe.test(placebo_res, discard.extreme = FALSE)
-
-mspe.plot(placebo_res, discard.extreme = FALSE)
-mspe.plot(placebo_res, discard.extreme = TRUE, mspe.limit = 20)
-
+#Replicate original paper results:
 
 #Reproducing the paper
 dataprep_out <- dataprep(
@@ -171,7 +137,6 @@ abline(v=1988,lty="dotted")
 
 
 # GAPS PLOT
-
 gaps <- dataprep_out$Y1 - synth_california
 
 plot(
@@ -182,12 +147,48 @@ plot(
 )
 abline(h=0, lty="dotted")
 
+#Get placebo test
 placebo_res = generate.placebos(dataprep_out, synth_out, Sigf.ipop = 3)
 plot_placebos(placebo_res, discard.extreme = FALSE)
 p_value = mspe.test(placebo_res, discard.extreme = FALSE)
 mspe.plot(placebo_res, discard.extreme = FALSE)
 mspe.plot(placebo_res, discard.extreme = TRUE, mspe.limit = 20)
 
+#Code for Truncated History Test
+california_dataframe = as.data.table(california_dataframe)
+california_dataframe[, state_numeric := as.numeric(state)]
+california_dataframe[, state := as.character(state)]
+
+california_dataframe[, treatment := ifelse(state_numeric == 3, 1,0)]
+
+treated_unit <- california_dataframe[treatment == 1, unique(state_numeric)]
+control_unit <- california_dataframe[treatment == 0, unique(state_numeric)]
+
+result_TruncHist = data.frame(Unit = numeric(), ate = numeric(), significance = numeric())
+years = 1970:1980
+for (year in years) {
+  scm_tobacco = scm_only_pretreatment(california_dataframe, y_variable = "cigsale", unit = "state",
+                                      time_variable = "year", pretreatment_period = year:1988, post_treatment_period = 1989:2000)
+  ate_tobacco = scm_tobacco$average_treatment
+  placebo_res = generate.placebos(scm_tobacco$dataprep_out, scm_tobacco$synth_out, Sigf.ipop = 3)
+  p_statistic = mspe.test(placebo_res, discard.extreme = FALSE)
+  p_value = p_statistic$p.val
+  result_TruncHist = rbind(result_TruncHist, data.frame(Unit = year, ate = ate_tobacco,  significance = p_value ))
+}
+
+scm_tobacco = scm_only_pretreatment(california_dataframe, y_variable = "cigsale", unit = "state",
+                                    time_variable = "year", pretreatment_period = 1980:1988, post_treatment_period = 1989:2000)
+scm_tobacco$average_treatment
+
+
+
+#In-Space Placebo test:
+placebo_res = generate.placebos(scm_tobacco$dataprep_out, scm_tobacco$synth_out, Sigf.ipop = 3)
+plot_placebos(placebo_res, discard.extreme = FALSE)
+p_value = mspe.test(placebo_res, discard.extreme = FALSE)
+
+mspe.plot(placebo_res, discard.extreme = FALSE)
+mspe.plot(placebo_res, discard.extreme = TRUE, mspe.limit = 20)
 
 
 
