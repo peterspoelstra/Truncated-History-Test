@@ -12,7 +12,7 @@ install_github("susanathey/MCPanel")
 library(synthdid)
 library(MCPanel)
 library(dplyr)
-
+rm(list = ls())
 #Code for Truncated History Test for SynthDid Paper
 
 mc_estimate = function(Y, N0, T0) {
@@ -57,6 +57,8 @@ truncated_hist_test = list()
 #Choose for how many years to apply the SynthDiD
 start_years = 1971:1977
 for (start_year in start_years) {
+  
+  start_year_char = as.character(start_year)
   california_trun = california_prop99[california_prop99$Year >= start_year, ]
   setup = panel.matrices(california_trun)
   
@@ -72,8 +74,10 @@ for (start_year in start_years) {
   rownames(california.table) = c('estimate', 'standard error')
   colnames(california.table) = toupper(names(estimators))
   
-  round(california.table, digits=1)
-  truncated_hist_test[[start_year]] = california.table
+  california_df = as.data.frame(california.table)
+  
+  #Save results in list
+  truncated_hist_test[[start_year_char]] = california_df
   
 }
 
@@ -85,7 +89,6 @@ se = sqrt(vcov(tau.hat, method='placebo'))
 sprintf('point estimate: %1.2f', tau.hat)
 sprintf('95%% CI (%1.2f, %1.2f)', tau.hat - 1.96 * se, tau.hat + 1.96 * se)
 plot(tau.hat)
-
 
 
 
