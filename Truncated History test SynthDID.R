@@ -1,14 +1,12 @@
 #SynthDid for Truncated History Test
 
-install.packages("synthdid")
-devtools::install_github("synth-inference/synthdid")
+# install.packages("synthdid")
+# devtools::install_github("synth-inference/synthdid")
+# install.packages("devtools")
+# install.packages("latex2exp")
+# install_github("susanathey/MCPanel")
 
-install.packages("devtools")
-install.packages("latex2exp")
 library(devtools) 
-install_github("susanathey/MCPanel")
-
-
 library(synthdid)
 library(MCPanel)
 library(dplyr)
@@ -46,7 +44,6 @@ estimators = list(did=did_estimate,
                   sc=sc_estimate,
                   sdid=synthdid_estimate,
                   difp=difp_estimate,
-                  mc = mc_estimate,
                   sc_reg = sc_estimate_reg)
 
 
@@ -55,7 +52,7 @@ data('california_prop99')
 truncated_hist_test = list()
 
 #Choose for how many years to apply the SynthDiD
-start_years = 1971:1977
+start_years = 1971:1974
 for (start_year in start_years) {
   
   start_year_char = as.character(start_year)
@@ -80,6 +77,75 @@ for (start_year in start_years) {
   truncated_hist_test[[start_year_char]] = california_df
   
 }
+
+#Table 2:
+
+#Load California data
+data('california_prop99')
+truncated_hist_test_table2 = list()
+
+#Choose for how many years to apply the SynthDiD
+pretreatment_years = 1970:1988  #1970:1988
+for (exclude_year in pretreatment_years) {
+  
+  exclude_year_char = as.character(exclude_year)
+  california_trun = california_prop99[california_prop99$Year != exclude_year, ]
+  setup = panel.matrices(california_trun)
+  
+  estimates = lapply(estimators, function(estimator) { estimator(setup$Y, setup$N0, setup$T0) } )
+
+  california.table = rbind(unlist(estimates))
+  rownames(california.table) = c('estimate')
+  colnames(california.table) = toupper(names(estimators))
+  
+  california_df = as.data.frame(california.table)
+  
+  #Save results in list
+  truncated_hist_test_table2[[exclude_year_char]] = california_df
+  
+}
+
+# Combine all the results into a single data frame
+combined_results <- do.call(rbind, truncated_hist_test_table2)
+
+min(combined_results$DID)
+max(combined_results$DID)
+
+#Load California data
+data('california_prop99')
+truncated_hist_test_table3 = list()
+
+#Choose for how many years to apply the SynthDiD
+states = unique(california_prop99$State)
+states = setdiff(states, "California")
+for (state in states) {
+  
+  exclude_state_char = as.character(state)
+  california_trun = california_prop99[california_prop99$State != state, ]
+  setup = panel.matrices(california_trun)
+  
+  estimates = lapply(estimators, function(estimator) { estimator(setup$Y, setup$N0, setup$T0) } )
+  
+  california.table = rbind(unlist(estimates))
+  rownames(california.table) = c('estimate')
+  colnames(california.table) = toupper(names(estimators))
+  
+  california_df = as.data.frame(california.table)
+  
+  #Save results in list
+  truncated_hist_test_table3[[exclude_state_char]] = california_df
+  
+}
+
+# Combine all the results into a single data frame
+combined_results3 <- do.call(rbind, truncated_hist_test_table3)
+
+mean(combined_results$DIFP)
+min(combined_results$DIFP)
+max(combined_results$DIFP)
+
+
+
 
 
 #if I want to do something with confidence intervals
