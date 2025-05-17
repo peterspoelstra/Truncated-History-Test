@@ -155,19 +155,34 @@ max(combined_results$DIFP)
 
 setup = panel.matrices(california_prop99)
 
-tau.sdid = synthdid_estimate(setup$Y, setup$N0, setup$T0)
+tau.sdid = synthdid_estimate(setup$Y, setup$N0, setup$T0, eta.omega=1e-6)
 print(summary(tau.sdid))
 
-tau.sc = sc_estimate(setup$Y, setup$N0, setup$T0)
+tau.difp = difp_estimate(setup$Y, setup$N0, setup$T0)
+print(summary(tau.difp))
+
+tau.difp2 = difp_estimate2(setup$Y, setup$N0, setup$T0)
+print(summary(tau.difp2))
+
+tau.difpreg = difp_estimate_reg(setup$Y, setup$N0, setup$T0)
+print(summary(tau.difp))
+
+tau.sc = sc_estimate(setup$Y, setup$N0, setup$T0, eta.omega = ((nrow(setup$Y) - setup$N0) * (ncol(setup$Y) - setup$T0))^(1/4) )
 print(summary(tau.sc))
+
+sc_estimate_reg = function(Y, N0, T0) {
+  sc_estimate(Y, N0, T0, eta.omega=((nrow(Y)-N0)*(ncol(Y)-T0))^(1/4))}
+
+tau_screg = sc_estimate_reg(setup$Y, setup$N0, setup$T0)
+print(summary(tau_screg))
+
 
 
 
 california_trun = california_prop99[california_prop99$Year >= 1974, ]
-
 setup = panel.matrices(california_trun)
 
-tau.hat = synthdid_estimate(setup$Y, setup$N0, setup$T0)
+tau.hat = synthdid_estimate(setup$Y, setup$N0, setup$T0, eta.omega=1e-6)
 print(summary(tau.hat))
 
 tau.sc = sc_estimate(setup$Y, setup$N0, setup$T0)
@@ -179,7 +194,7 @@ setup = panel.matrices(california_out)
 tau.hat = synthdid_estimate(setup$Y, setup$N0, setup$T0)
 print(summary(tau.hat))
 
-tau.sc = sc_estimate(setup$Y, setup$N0, setup$T0)
+tau.sc = sc_estimate(setup$Y, setup$N0, setup$T0, eta.omega = ((nrow(setup$Y) - setup$N0) * (ncol(setup$Y) - setup$T0))^(1/4) )
 print(summary(tau.sc))
 
 synthdid_controls(tau.hat)
@@ -241,7 +256,6 @@ se = sqrt(vcov(tau.hat, method='placebo'))
 sprintf('point estimate: %1.2f', tau.hat)
 sprintf('95%% CI (%1.2f, %1.2f)', tau.hat - 1.96 * se, tau.hat + 1.96 * se)
 plot(tau.hat)
-
 
 
 

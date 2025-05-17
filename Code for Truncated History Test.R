@@ -87,6 +87,8 @@ mspe.plot(placebo_res, discard.extreme = TRUE, mspe.limit = 20)
 
 
 
+
+
 #---- Abadie 2010 Tobocco ----
 
 #Load data California
@@ -165,7 +167,7 @@ treated_unit <- california_dataframe[treatment == 1, unique(state_numeric)]
 control_unit <- california_dataframe[treatment == 0, unique(state_numeric)]
 
 result_TruncHist = data.frame(Unit = numeric(), ate = numeric(), significance = numeric())
-years = 1970:1980
+years = 1970:1974
 for (year in years) {
   scm_tobacco = scm_only_pretreatment(california_dataframe, y_variable = "cigsale", unit = "state",
                                       time_variable = "year", pretreatment_period = year:1988, post_treatment_period = 1989:2000)
@@ -178,7 +180,7 @@ for (year in years) {
 
 #individual cases
 scm_tobacco = scm_only_pretreatment(california_dataframe, y_variable = "cigsale", unit = "state",
-                                    time_variable = "year", pretreatment_period = 1971:1988, post_treatment_period = 1989:2000)
+                                    time_variable = "year", pretreatment_period = 1974:1988, post_treatment_period = 1989:2000)
 scm_tobacco$average_treatment
 
 
@@ -196,11 +198,13 @@ mspe.plot(placebo_res, discard.extreme = TRUE, mspe.limit = 20)
 german_reunification_url = "https://raw.githubusercontent.com/OscarEngelbrektson/SyntheticControlMethods/refs/heads/master/examples/datasets/german_reunification.csv"
 german_dataframe = read.csv(german_reunification_url) 
 
+
 german_dataframe = as.data.table(german_dataframe)
 german_dataframe[, code_numeric := as.numeric(code)]
 german_dataframe[, code := as.character(code)]
 
 german_dataframe[, treatment := ifelse(code_numeric == 7, 1,0)]
+
 
 treated_unit <- german_dataframe[treatment == 1, unique(code_numeric)]
 control_unit <- german_dataframe[treatment == 0, unique(code_numeric)]
