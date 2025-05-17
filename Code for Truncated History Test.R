@@ -176,10 +176,10 @@ for (year in years) {
   result_TruncHist = rbind(result_TruncHist, data.frame(Unit = year, ate = ate_tobacco,  significance = p_value ))
 }
 
+#individual cases
 scm_tobacco = scm_only_pretreatment(california_dataframe, y_variable = "cigsale", unit = "state",
-                                    time_variable = "year", pretreatment_period = 1980:1988, post_treatment_period = 1989:2000)
+                                    time_variable = "year", pretreatment_period = 1971:1988, post_treatment_period = 1989:2000)
 scm_tobacco$average_treatment
-
 
 
 #In-Space Placebo test:

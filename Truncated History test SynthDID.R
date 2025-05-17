@@ -51,6 +51,8 @@ estimators = list(did=did_estimate,
 data('california_prop99')
 truncated_hist_test = list()
 
+#---- Table 1 Code ----
+
 #Choose for how many years to apply the SynthDiD
 start_years = 1971:1974
 for (start_year in start_years) {
@@ -78,7 +80,7 @@ for (start_year in start_years) {
   
 }
 
-#Table 2:
+#---- Table 2 Code ----
 
 #Load California data
 data('california_prop99')
@@ -110,6 +112,8 @@ combined_results <- do.call(rbind, truncated_hist_test_table2)
 
 min(combined_results$DID)
 max(combined_results$DID)
+
+#Leave one out part of Table 2
 
 #Load California data
 data('california_prop99')
@@ -144,6 +148,88 @@ mean(combined_results$DIFP)
 min(combined_results$DIFP)
 max(combined_results$DIFP)
 
+
+#---- Experimentation Code ----  
+
+#Load California data
+
+setup = panel.matrices(california_prop99)
+
+tau.sdid = synthdid_estimate(setup$Y, setup$N0, setup$T0)
+print(summary(tau.sdid))
+
+tau.sc = sc_estimate(setup$Y, setup$N0, setup$T0)
+print(summary(tau.sc))
+
+
+
+california_trun = california_prop99[california_prop99$Year >= 1974, ]
+
+setup = panel.matrices(california_trun)
+
+tau.hat = synthdid_estimate(setup$Y, setup$N0, setup$T0)
+print(summary(tau.hat))
+
+tau.sc = sc_estimate(setup$Y, setup$N0, setup$T0)
+print(summary(tau.sc))
+
+california_out = california_prop99[california_prop99$State != "Utah",]
+setup = panel.matrices(california_out)
+
+tau.hat = synthdid_estimate(setup$Y, setup$N0, setup$T0)
+print(summary(tau.hat))
+
+tau.sc = sc_estimate(setup$Y, setup$N0, setup$T0)
+print(summary(tau.sc))
+
+synthdid_controls(tau.hat)
+
+#Plot conneticut 
+
+# Filter for California and Connecticut
+df_subset <- subset(california_prop99, State %in% c("California", "Connecticut", "Utah", "Montana", "Nevada"))
+
+# Create plot
+plot(california_prop99$Year[california_prop99$State == "California"],
+     california_prop99$PacksPerCapita[california_prop99$State == "California"],
+     type = "l", col = "blue", lwd = 2,
+     ylim = c(50,200),
+     xlab = "Year", ylab = "Packs Per Capita",
+     main = "Cigarette Consumption: California vs. Connecticut")
+
+# Add Connecticut line
+lines(california_prop99$Year[california_prop99$State == "Connecticut"],
+      california_prop99$PacksPerCapita[california_prop99$State == "Connecticut"],
+      col = "red", lwd = 2)
+lines(california_prop99$Year[california_prop99$State == "Utah"],
+      california_prop99$PacksPerCapita[california_prop99$State == "Utah"],
+      col = "red", lwd = 2)
+lines(california_prop99$Year[california_prop99$State == "Montana"],
+      california_prop99$PacksPerCapita[california_prop99$State == "Montana"],
+      col = "red", lwd = 2)
+lines(california_prop99$Year[california_prop99$State == "Nevada"],
+      california_prop99$PacksPerCapita[california_prop99$State == "Nevada"],
+      col = "red", lwd = 2)
+lines(california_prop99$Year[california_prop99$State == "New Mexico"],
+      california_prop99$PacksPerCapita[california_prop99$State == "New Mexico"],
+      col = "red", lwd = 2)
+lines(california_prop99$Year[california_prop99$State == "Idaho"],
+      california_prop99$PacksPerCapita[california_prop99$State == "Idaho"],
+      col = "red", lwd = 2)
+lines(california_prop99$Year[california_prop99$State == "North Carolina"],
+      california_prop99$PacksPerCapita[california_prop99$State == "North Carolina"],
+      col = "red", lwd = 2)
+
+
+
+
+
+abline(v = 1989, lty = 2, col = "darkgray")
+
+
+# Add legend
+legend("topright", legend = c("California", "Connecticut"),
+       col = c("blue", "red"), lty = 1, lwd = 2)
 
 
 
