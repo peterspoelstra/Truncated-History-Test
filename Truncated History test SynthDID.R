@@ -149,14 +149,93 @@ min(combined_results$DIFP)
 max(combined_results$DIFP)
 
 
+#---- Table 3 Code ----
+sdid1 = function(Y, N0, T0) {
+  synthdid_estimate(setup$Y, setup$N0, setup$T0, omega.intercept = TRUE)
+}
+sdid2 = function(Y, N0, T0) {
+  synthdid_estimate(setup$Y, setup$N0, setup$T0, eta.omega=1e-6, omega.intercept = TRUE) #eta.omega = 1e-6 is zero
+}
+sdid3 = function(Y, N0, T0) {
+  synthdid_estimate(setup$Y, setup$N0, setup$T0, omega.intercept = FALSE)
+}
+sdid4 = function(Y, N0, T0) {
+  synthdid_estimate(setup$Y, setup$N0, setup$T0, eta.omega=1e-6, omega.intercept = FALSE)
+}
+
+estimators = list(n1=sdid1,
+                  n2=sdid2,
+                  n3=sdid3,
+                  n4=sdid4)
+
+
+
+
+#Choose for how many years to apply the SynthDiD
+truncated_hist_test_sdid = list()
+start_years = 1970:1974
+
+for (start_year in start_years) {
+  
+  start_year_char = as.character(start_year)
+  california_trun = california_prop99[california_prop99$Year >= start_year, ]
+  setup = panel.matrices(california_trun)
+  
+  estimates = lapply(estimators, function(estimator) { estimator(setup$Y, setup$N0, setup$T0) } )
+  standard.errors = mapply(function(estimate, name) {
+    set.seed(12345)
+    sqrt(vcov(estimate, method='placebo'))
+  }, estimates, names(estimators))
+  
+  positive.weights = sapply(estimates, function(estimate) {
+    weights = attr(estimate, "weights")$omega
+    sum(weights > 0)
+  })
+  
+  positive.weights_1 = sapply(estimates, function(estimate) {
+    weights = attr(estimate, "weights")$omega
+    sum(weights > 0.01)
+  })
+  
+  
+  california.table = rbind(
+    unlist(estimates),
+    unlist(standard.errors),
+    unlist(positive.weights),
+    unlist(positive.weights_1)
+  )
+  
+  rownames(california.table) = c('estimate', 'standard error', "pos_weight_0", "pos_weight_1")
+  colnames(california.table) = toupper(names(estimators))
+  
+  california_df = as.data.frame(california.table)
+  
+  #Save results in list
+  truncated_hist_test_sdid[[start_year_char]] = california_df
+  
+}
+
+
+
 #---- Experimentation Code ----  
 
 #Load California data
 
 setup = panel.matrices(california_prop99)
 
-tau.sdid = synthdid_estimate(setup$Y, setup$N0, setup$T0, eta.omega=1e-6)
+tau.sdid = synthdid_estimate(setup$Y, setup$N0, setup$T0, eta.omega=1e-6, omega.intercept = FALSE)
 print(summary(tau.sdid))
+
+
+weights <- attr(tau.sdid, "weights")$omega
+
+# Count the number of control units with positive weight
+num_positive_weights <- sum(weights > 0)
+
+# Print the result
+print(num_positive_weights)
+
+
 
 tau.difp = difp_estimate(setup$Y, setup$N0, setup$T0)
 print(summary(tau.difp))
@@ -179,11 +258,13 @@ print(summary(tau_screg))
 
 
 
-california_trun = california_prop99[california_prop99$Year >= 1974, ]
+california_trun = california_prop99[california_prop99$Year >= 1971, ]
 setup = panel.matrices(california_trun)
 
-tau.hat = synthdid_estimate(setup$Y, setup$N0, setup$T0, eta.omega=1e-6)
+tau.hat = synthdid_estimate(setup$Y, setup$N0, setup$T0, eta.omega=1e-6, omega.intercept = FALSE )
 print(summary(tau.hat))
+
+
 
 tau.sc = sc_estimate(setup$Y, setup$N0, setup$T0)
 print(summary(tau.sc))
@@ -257,6 +338,10 @@ sprintf('point estimate: %1.2f', tau.hat)
 sprintf('95%% CI (%1.2f, %1.2f)', tau.hat - 1.96 * se, tau.hat + 1.96 * se)
 plot(tau.hat)
 
-
+tau.hat2 = synthdid_estimate(setup$Y, setup$N0, setup$T0, omega.intercept = FALSE)
+se = sqrt(vcov(tau.hat2, method='placebo'))
+sprintf('point estimate: %1.2f', tau.hat2)
+sprintf('95%% CI (%1.2f, %1.2f)', tau.hat2 - 1.96 * se, tau.hat2 + 1.96 * se)
+plot(tau.hat2)
 
 
