@@ -113,6 +113,71 @@ combined_results <- do.call(rbind, truncated_hist_test_table2)
 min(combined_results$DID)
 max(combined_results$DID)
 
+
+#Right truncation part
+
+truncated_hist_right = list()
+
+
+
+#Choose for how many years to apply the SynthDiD
+right_years = 1984:1987
+for (right_year in right_years) {
+  
+  right_yearr_char = as.character(right_year)
+  california_trun = california_prop99[california_prop99$Year <= right_year | california_prop99$Year > 1988 , ]
+  setup = panel.matrices(california_trun)
+  
+  estimates = lapply(estimators, function(estimator) { estimator(setup$Y, setup$N0, setup$T0) } )
+
+  california.table = rbind(unlist(estimates))
+  rownames(california.table) = c('estimate')
+  colnames(california.table) = toupper(names(estimators))
+  
+  california_df = as.data.frame(california.table)
+  
+  #Save results in list
+  truncated_hist_right[[right_yearr_char]] = california_df
+  
+}
+
+combined_results <- do.call(rbind, truncated_hist_right)
+
+mean(combined_results$DIFP)
+min(combined_results$DIFP)
+max(combined_results$DIFP)
+
+
+
+pretreatment_years = 1970:1988  #1970:1988
+for (exclude_year in pretreatment_years) {
+  
+  exclude_year_char = as.character(exclude_year)
+  california_trun = california_prop99[california_prop99$Year != exclude_year, ]
+  setup = panel.matrices(california_trun)
+  
+  estimates = lapply(estimators, function(estimator) { estimator(setup$Y, setup$N0, setup$T0) } )
+  
+  california.table = rbind(unlist(estimates))
+  rownames(california.table) = c('estimate')
+  colnames(california.table) = toupper(names(estimators))
+  
+  california_df = as.data.frame(california.table)
+  
+  #Save results in list
+  truncated_hist_test_table2[[exclude_year_char]] = california_df
+  
+}
+
+# Combine all the results into a single data frame
+combined_results <- do.call(rbind, truncated_hist_test_table2)
+
+min(combined_results$DID)
+max(combined_results$DID)
+
+
+
+
 #Leave one out part of Table 2
 
 #Load California data
@@ -147,6 +212,8 @@ combined_results3 <- do.call(rbind, truncated_hist_test_table3)
 mean(combined_results$DIFP)
 min(combined_results$DIFP)
 max(combined_results$DIFP)
+
+
 
 
 #---- Table 3 Code ----
