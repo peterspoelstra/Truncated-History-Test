@@ -86,7 +86,7 @@ for (start_year in start_years) {
 data('california_prop99')
 truncated_hist_test_table2 = list()
 
-#Choose for how many years to apply the SynthDiD
+#Leave-one-time-period-out
 pretreatment_years = 1970:1988  #1970:1988
 for (exclude_year in pretreatment_years) {
   
@@ -112,13 +112,48 @@ combined_results <- do.call(rbind, truncated_hist_test_table2)
 
 min(combined_results$DID)
 max(combined_results$DID)
+mean(combined_results$DID)
+
+#Leave-two-time-periods-out
+#Load California data
+data('california_prop99')
+truncated_hist_test_table2 = list()
+
+pretreatment_years = 1970:1988  #1970:1988
+year_combinations = combn(pretreatment_years, 2, simplify = FALSE)
+
+# Loop over each pair of years to exclude
+for (exclude_years in year_combinations) {
+  
+  combo_label = paste(exclude_years, collapse = "_")
+  california_trun = california_prop99[!california_prop99$Year %in% exclude_years, ]
+  setup = panel.matrices(california_trun)
+  
+  estimates = lapply(estimators, function(estimator) {
+    estimator(setup$Y, setup$N0, setup$T0)
+  })
+  
+  california.table = rbind(unlist(estimates))
+  rownames(california.table) = c('estimate')
+  colnames(california.table) = toupper(names(estimators))
+  
+  california_df = as.data.frame(california.table)
+  
+  # Save results in list
+  truncated_hist_test_table2[[combo_label]] = california_df
+}
+
+# Combine all the results into a single data frame
+combined_results <- do.call(rbind, truncated_hist_test_table2)
+
+#Do for every model
+min(combined_results$SC)
+max(combined_results$SC)
+mean(combined_results$SC)
 
 
 #Right truncation part
-
 truncated_hist_right = list()
-
-
 
 #Choose for how many years to apply the SynthDiD
 right_years = 1984:1987
@@ -148,37 +183,7 @@ min(combined_results$DIFP)
 max(combined_results$DIFP)
 
 
-
-pretreatment_years = 1970:1988  #1970:1988
-for (exclude_year in pretreatment_years) {
-  
-  exclude_year_char = as.character(exclude_year)
-  california_trun = california_prop99[california_prop99$Year != exclude_year, ]
-  setup = panel.matrices(california_trun)
-  
-  estimates = lapply(estimators, function(estimator) { estimator(setup$Y, setup$N0, setup$T0) } )
-  
-  california.table = rbind(unlist(estimates))
-  rownames(california.table) = c('estimate')
-  colnames(california.table) = toupper(names(estimators))
-  
-  california_df = as.data.frame(california.table)
-  
-  #Save results in list
-  truncated_hist_test_table2[[exclude_year_char]] = california_df
-  
-}
-
-# Combine all the results into a single data frame
-combined_results <- do.call(rbind, truncated_hist_test_table2)
-
-min(combined_results$DID)
-max(combined_results$DID)
-
-
-
-
-#Leave one out part of Table 2
+#Leave one unit out part of Table 2
 
 #Load California data
 data('california_prop99')

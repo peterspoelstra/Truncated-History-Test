@@ -178,9 +178,14 @@ for (year in years) {
   result_TruncHist = rbind(result_TruncHist, data.frame(Unit = year, ate = ate_tobacco,  significance = p_value ))
 }
 
+
+california_dataframe[, treatment := ifelse(state_numeric == 3, 1,0)]
+
+treated_unit <- california_dataframe[treatment == 1, unique(state_numeric)]
+control_unit <- california_dataframe[treatment == 0, unique(state_numeric)]
 #individual cases
 scm_tobacco = scm_only_pretreatment(california_dataframe, y_variable = "cigsale", unit = "state",
-                                    time_variable = "year", pretreatment_period = 1974:1988, post_treatment_period = 1989:2000)
+                                    time_variable = "year", pretreatment_period = 1972:1988, post_treatment_period = 1989:2000)
 scm_tobacco$average_treatment
 
 
@@ -220,5 +225,3 @@ plot_placebos(placebo_res, discard.extreme = FALSE)
 p_value = mspe.test(placebo_res, discard.extreme = FALSE)
 mspe.plot(placebo_res, discard.extreme = FALSE)
 mspe.plot(placebo_res, discard.extreme = TRUE, mspe.limit = 20)
-
-
