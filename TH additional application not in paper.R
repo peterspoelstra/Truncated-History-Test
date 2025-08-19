@@ -1,10 +1,9 @@
-#Test file for truncated history test
+#Truncated History Test on other applications, this is not included in the paper
 library(Synth)
 library(data.table)
 library(SCtools)
 rm(list = ls());gc()
 
-#Three Abadie paper cases:
 
 #---- Synth pretreatment function ---- 
 scm_only_pretreatment <- function(dt, y_variable, unit, time_variable, pretreatment_period, post_treatment_period){
@@ -60,6 +59,7 @@ scm_only_pretreatment <- function(dt, y_variable, unit, time_variable, pretreatm
 
 
 
+
 #---- Abadie 2003 Basque ----
 data("basque")
 basque = as.data.table(basque)
@@ -86,14 +86,35 @@ mspe.plot(placebo_res, discard.extreme = TRUE, mspe.limit = 20)
 
 
 
+#---- Abadie 2015 German Reunification ----
+german_reunification_url = "https://raw.githubusercontent.com/OscarEngelbrektson/SyntheticControlMethods/refs/heads/master/examples/datasets/german_reunification.csv"
+german_dataframe = read.csv(german_reunification_url) 
 
 
+german_dataframe = as.data.table(german_dataframe)
+german_dataframe[, code_numeric := as.numeric(code)]
+german_dataframe[, code := as.character(code)]
 
-#---- Abadie 2010 Tobocco ----
+german_dataframe[, treatment := ifelse(code_numeric == 7, 1,0)]
 
-#Load data California
-california_data_url = "https://raw.githubusercontent.com/causalify-code/synthetic-control-replications/refs/heads/main/california-tobacco-control-program/data-abadie-diamond-hainmueller-california-proposition-99-tobacco-control-program-synthetic-control.csv"
-california_dataframe = read.csv(california_data_url)
+
+treated_unit <- german_dataframe[treatment == 1, unique(code_numeric)]
+control_unit <- german_dataframe[treatment == 0, unique(code_numeric)]
+
+
+scm_german = scm_only_pretreatment(german_dataframe, y_variable = "gdp", unit = "code",
+                                   time_variable = "year", pretreatment_period = 1961:1989, post_treatment_period = 1990:2003)
+scm_german$average_treatment
+
+#In-Time Placebo test:
+placebo_res = generate.placebos(scm_german$dataprep_out, scm_german$synth_out, Sigf.ipop = 3)
+plot_placebos(placebo_res, discard.extreme = FALSE)
+p_value = mspe.test(placebo_res, discard.extreme = FALSE)
+mspe.plot(placebo_res, discard.extreme = FALSE)
+mspe.plot(placebo_res, discard.extreme = TRUE, mspe.limit = 20)
+
+
+#---- Abadie 2010 replication original paper results ----
 
 #Replicate original paper results:
 
@@ -149,78 +170,11 @@ plot(
 )
 abline(h=0, lty="dotted")
 
+
+#Peter Added:
+
 #Get placebo test
 placebo_res = generate.placebos(dataprep_out, synth_out, Sigf.ipop = 3)
-plot_placebos(placebo_res, discard.extreme = FALSE)
-p_value = mspe.test(placebo_res, discard.extreme = FALSE)
-mspe.plot(placebo_res, discard.extreme = FALSE)
-mspe.plot(placebo_res, discard.extreme = TRUE, mspe.limit = 20)
-
-#Code for Truncated History Test
-california_dataframe = as.data.table(california_dataframe)
-california_dataframe[, state_numeric := as.numeric(state)]
-california_dataframe[, state := as.character(state)]
-
-california_dataframe[, treatment := ifelse(state_numeric == 3, 1,0)]
-
-treated_unit <- california_dataframe[treatment == 1, unique(state_numeric)]
-control_unit <- california_dataframe[treatment == 0, unique(state_numeric)]
-
-result_TruncHist = data.frame(Unit = numeric(), ate = numeric(), significance = numeric())
-years = 1970:1974
-for (year in years) {
-  scm_tobacco = scm_only_pretreatment(california_dataframe, y_variable = "cigsale", unit = "state",
-                                      time_variable = "year", pretreatment_period = year:1988, post_treatment_period = 1989:2000)
-  ate_tobacco = scm_tobacco$average_treatment
-  placebo_res = generate.placebos(scm_tobacco$dataprep_out, scm_tobacco$synth_out, Sigf.ipop = 3)
-  p_statistic = mspe.test(placebo_res, discard.extreme = FALSE)
-  p_value = p_statistic$p.val
-  result_TruncHist = rbind(result_TruncHist, data.frame(Unit = year, ate = ate_tobacco,  significance = p_value ))
-}
-
-
-california_dataframe[, treatment := ifelse(state_numeric == 3, 1,0)]
-
-treated_unit <- california_dataframe[treatment == 1, unique(state_numeric)]
-control_unit <- california_dataframe[treatment == 0, unique(state_numeric)]
-#individual cases
-scm_tobacco = scm_only_pretreatment(california_dataframe, y_variable = "cigsale", unit = "state",
-                                    time_variable = "year", pretreatment_period = 1972:1988, post_treatment_period = 1989:2000)
-scm_tobacco$average_treatment
-
-
-#In-Space Placebo test:
-placebo_res = generate.placebos(scm_tobacco$dataprep_out, scm_tobacco$synth_out, Sigf.ipop = 3)
-plot_placebos(placebo_res, discard.extreme = FALSE)
-p_value = mspe.test(placebo_res, discard.extreme = FALSE)
-
-mspe.plot(placebo_res, discard.extreme = FALSE)
-mspe.plot(placebo_res, discard.extreme = TRUE, mspe.limit = 20)
-
-
-
-#---- Abadie 2015 German Reunification ----
-german_reunification_url = "https://raw.githubusercontent.com/OscarEngelbrektson/SyntheticControlMethods/refs/heads/master/examples/datasets/german_reunification.csv"
-german_dataframe = read.csv(german_reunification_url) 
-
-
-german_dataframe = as.data.table(german_dataframe)
-german_dataframe[, code_numeric := as.numeric(code)]
-german_dataframe[, code := as.character(code)]
-
-german_dataframe[, treatment := ifelse(code_numeric == 7, 1,0)]
-
-
-treated_unit <- german_dataframe[treatment == 1, unique(code_numeric)]
-control_unit <- german_dataframe[treatment == 0, unique(code_numeric)]
-
-
-scm_german = scm_only_pretreatment(german_dataframe, y_variable = "gdp", unit = "code",
-                                   time_variable = "year", pretreatment_period = 1961:1989, post_treatment_period = 1990:2003)
-scm_german$average_treatment
-
-#In-Time Placebo test:
-placebo_res = generate.placebos(scm_german$dataprep_out, scm_german$synth_out, Sigf.ipop = 3)
 plot_placebos(placebo_res, discard.extreme = FALSE)
 p_value = mspe.test(placebo_res, discard.extreme = FALSE)
 mspe.plot(placebo_res, discard.extreme = FALSE)

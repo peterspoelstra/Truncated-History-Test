@@ -1,4 +1,9 @@
-#SynthDid for Truncated History Test
+#Author Peter Spoelstra
+#Code for (Generalized) Truncated History for Synthetic Control Approaches
+#This code is for the paper Table 1, 2 and 3
+
+
+#---- Install and load packages ----
 
 # install.packages("synthdid")
 # devtools::install_github("synth-inference/synthdid")
@@ -11,52 +16,29 @@ library(synthdid)
 library(MCPanel)
 library(dplyr)
 rm(list = ls())
-#Code for Truncated History Test for SynthDid Paper
 
-mc_estimate = function(Y, N0, T0) {
-  N1=nrow(Y)-N0
-  T1=ncol(Y)-T0
-  W <- outer(c(rep(0,N0),rep(1,N1)),c(rep(0,T0),rep(1,T1)))
-  mc_pred <- mcnnm_cv(Y, 1-W, num_lam_L = 20)
-  mc_fit  <- mc_pred$L + outer(mc_pred$u, mc_pred$v, '+')
-  mc_est <- sum(W*(Y-mc_fit))/sum(W)
-  mc_est
-}
-mc_placebo_se = function(Y, N0, T0, replications=200) {
-  N1 = nrow(Y) - N0
-  theta = function(ind) { mc_estimate(Y[ind,], length(ind)-N1, T0) }
-  sqrt((replications-1)/replications) * sd(replicate(replications, theta(sample(1:N0))))
-}
-
-difp_estimate = function(Y, N0, T0) {
-  synthdid_estimate(Y, N0, T0, weights=list(lambda=rep(1/T0, T0)), eta.omega=1e-6)
-}
-
-sc_estimate_reg = function(Y, N0, T0) {
-  sc_estimate(Y, N0, T0, eta.omega=((nrow(Y)-N0)*(ncol(Y)-T0))^(1/4))
-}
-difp_estimate_reg = function(Y, N0, T0) {
-  synthdid_estimate(Y, N0, T0, weights=list(lambda=rep(1/T0, T0)))
-}
-
-
-estimators = list(did=did_estimate,
-                  sc=sc_estimate,
-                  sdid=synthdid_estimate,
-                  difp=difp_estimate,
-                  sc_reg = sc_estimate_reg)
-
+#We use the package Synthdid from Arkhangelsky et al. (2021)
 
 #Load California data
 data('california_prop99')
 truncated_hist_test = list()
 
+
+#Add DIFP estimator, the rest is already in synthdid (see https://synth-inference.github.io/synthdid/articles/paper-results.html for more details)
+difp_estimate = function(Y, N0, T0) {
+  synthdid_estimate(Y, N0, T0, weights=list(lambda=rep(1/T0, T0)), eta.omega=1e-6)
+}
+
+estimators = list(did=did_estimate,
+                  sc=sc_estimate,
+                  sdid=synthdid_estimate,
+                  difp=difp_estimate)
+
 #---- Table 1 Code ----
 
-#Choose for how many years to apply the SynthDiD
-start_years = 1971:1974
+#Choose for how many years to apply the Truncated History Test
+start_years = 1970:1974
 for (start_year in start_years) {
-  
   start_year_char = as.character(start_year)
   california_trun = california_prop99[california_prop99$Year >= start_year, ]
   setup = panel.matrices(california_trun)
@@ -68,7 +50,6 @@ for (start_year in start_years) {
     else {             sqrt(vcov(estimate, method='placebo'))     }
   }, estimates, names(estimators))
   
-  
   california.table = rbind(unlist(estimates), unlist(standard.errors))
   rownames(california.table) = c('estimate', 'standard error')
   colnames(california.table) = toupper(names(estimators))
@@ -79,6 +60,7 @@ for (start_year in start_years) {
   truncated_hist_test[[start_year_char]] = california_df
   
 }
+#The results are stored in truncated_hist_test and presented in Table 1 of the paper 
 
 #---- Table 2 Code ----
 
@@ -104,8 +86,10 @@ for (exclude_year in pretreatment_years) {
   
   #Save results in list
   truncated_hist_test_table2[[exclude_year_char]] = california_df
-  
 }
+
+#The results in Table 2 of the leave-one-time-period out are stored in truncated_hist_test_table2 
+#the code below extract them. We use the same setup for leave-two-time periods-out,leave-one-unit out and right and left truncation
 
 # Combine all the results into a single data frame
 combined_results <- do.call(rbind, truncated_hist_test_table2)
@@ -219,9 +203,9 @@ min(combined_results$DIFP)
 max(combined_results$DIFP)
 
 
-
-
 #---- Table 3 Code ----
+
+#The sdid possible combinations from table 3
 sdid1 = function(Y, N0, T0) {
   synthdid_estimate(setup$Y, setup$N0, setup$T0, omega.intercept = TRUE)
 }
@@ -242,8 +226,7 @@ estimators = list(n1=sdid1,
 
 
 
-
-#Choose for how many years to apply the SynthDiD
+#Choose for how many years to apply the Truncated History Robustness Check
 truncated_hist_test_sdid = list()
 start_years = 1970:1974
 
@@ -254,10 +237,10 @@ for (start_year in start_years) {
   setup = panel.matrices(california_trun)
   
   estimates = lapply(estimators, function(estimator) { estimator(setup$Y, setup$N0, setup$T0) } )
-  standard.errors = mapply(function(estimate, name) {
-    set.seed(12345)
-    sqrt(vcov(estimate, method='placebo'))
-  }, estimates, names(estimators))
+  # standard.errors = mapply(function(estimate, name) {
+  #   set.seed(12345)
+  #   sqrt(vcov(estimate, method='placebo'))
+  # }, estimates, names(estimators))
   
   positive.weights = sapply(estimates, function(estimate) {
     weights = attr(estimate, "weights")$omega
@@ -272,12 +255,13 @@ for (start_year in start_years) {
   
   california.table = rbind(
     unlist(estimates),
-    unlist(standard.errors),
+    #unlist(standard.errors),
     unlist(positive.weights),
     unlist(positive.weights_1)
   )
   
-  rownames(california.table) = c('estimate', 'standard error', "pos_weight_0", "pos_weight_1")
+  #rownames(california.table) = c('estimate', 'standard error', "pos_weight_0", "pos_weight_1")
+  rownames(california.table) = c('estimate', "pos_weight_0", "pos_weight_1")
   colnames(california.table) = toupper(names(estimators))
   
   california_df = as.data.frame(california.table)
@@ -287,133 +271,5 @@ for (start_year in start_years) {
   
 }
 
-
-
-#---- Experimentation Code ----  
-
-#Load California data
-
-setup = panel.matrices(california_prop99)
-
-tau.sdid = synthdid_estimate(setup$Y, setup$N0, setup$T0, eta.omega=1e-6, omega.intercept = FALSE)
-print(summary(tau.sdid))
-
-
-weights <- attr(tau.sdid, "weights")$omega
-
-# Count the number of control units with positive weight
-num_positive_weights <- sum(weights > 0)
-
-# Print the result
-print(num_positive_weights)
-
-
-
-tau.difp = difp_estimate(setup$Y, setup$N0, setup$T0)
-print(summary(tau.difp))
-
-tau.difp2 = difp_estimate2(setup$Y, setup$N0, setup$T0)
-print(summary(tau.difp2))
-
-tau.difpreg = difp_estimate_reg(setup$Y, setup$N0, setup$T0)
-print(summary(tau.difp))
-
-tau.sc = sc_estimate(setup$Y, setup$N0, setup$T0, eta.omega = ((nrow(setup$Y) - setup$N0) * (ncol(setup$Y) - setup$T0))^(1/4) )
-print(summary(tau.sc))
-
-sc_estimate_reg = function(Y, N0, T0) {
-  sc_estimate(Y, N0, T0, eta.omega=((nrow(Y)-N0)*(ncol(Y)-T0))^(1/4))}
-
-tau_screg = sc_estimate_reg(setup$Y, setup$N0, setup$T0)
-print(summary(tau_screg))
-
-
-
-
-california_trun = california_prop99[california_prop99$Year >= 1971, ]
-setup = panel.matrices(california_trun)
-
-tau.hat = synthdid_estimate(setup$Y, setup$N0, setup$T0, eta.omega=1e-6, omega.intercept = FALSE )
-print(summary(tau.hat))
-
-
-
-tau.sc = sc_estimate(setup$Y, setup$N0, setup$T0)
-print(summary(tau.sc))
-
-california_out = california_prop99[california_prop99$State != "Utah",]
-setup = panel.matrices(california_out)
-
-tau.hat = synthdid_estimate(setup$Y, setup$N0, setup$T0)
-print(summary(tau.hat))
-
-tau.sc = sc_estimate(setup$Y, setup$N0, setup$T0, eta.omega = ((nrow(setup$Y) - setup$N0) * (ncol(setup$Y) - setup$T0))^(1/4) )
-print(summary(tau.sc))
-
-synthdid_controls(tau.hat)
-
-#Plot conneticut 
-
-# Filter for California and Connecticut
-df_subset <- subset(california_prop99, State %in% c("California", "Connecticut", "Utah", "Montana", "Nevada"))
-
-# Create plot
-plot(california_prop99$Year[california_prop99$State == "California"],
-     california_prop99$PacksPerCapita[california_prop99$State == "California"],
-     type = "l", col = "blue", lwd = 2,
-     ylim = c(50,200),
-     xlab = "Year", ylab = "Packs Per Capita",
-     main = "Cigarette Consumption: California vs. Connecticut")
-
-# Add Connecticut line
-lines(california_prop99$Year[california_prop99$State == "Connecticut"],
-      california_prop99$PacksPerCapita[california_prop99$State == "Connecticut"],
-      col = "red", lwd = 2)
-lines(california_prop99$Year[california_prop99$State == "Utah"],
-      california_prop99$PacksPerCapita[california_prop99$State == "Utah"],
-      col = "red", lwd = 2)
-lines(california_prop99$Year[california_prop99$State == "Montana"],
-      california_prop99$PacksPerCapita[california_prop99$State == "Montana"],
-      col = "red", lwd = 2)
-lines(california_prop99$Year[california_prop99$State == "Nevada"],
-      california_prop99$PacksPerCapita[california_prop99$State == "Nevada"],
-      col = "red", lwd = 2)
-lines(california_prop99$Year[california_prop99$State == "New Mexico"],
-      california_prop99$PacksPerCapita[california_prop99$State == "New Mexico"],
-      col = "red", lwd = 2)
-lines(california_prop99$Year[california_prop99$State == "Idaho"],
-      california_prop99$PacksPerCapita[california_prop99$State == "Idaho"],
-      col = "red", lwd = 2)
-lines(california_prop99$Year[california_prop99$State == "North Carolina"],
-      california_prop99$PacksPerCapita[california_prop99$State == "North Carolina"],
-      col = "red", lwd = 2)
-
-
-
-
-
-abline(v = 1989, lty = 2, col = "darkgray")
-
-
-# Add legend
-legend("topright", legend = c("California", "Connecticut"),
-       col = c("blue", "red"), lty = 1, lwd = 2)
-
-
-
-
-#if I want to do something with confidence intervals
-setup = panel.matrices(california_prop99)
-tau.hat = synthdid_estimate(setup$Y, setup$N0, setup$T0)
-se = sqrt(vcov(tau.hat, method='placebo'))
-sprintf('point estimate: %1.2f', tau.hat)
-sprintf('95%% CI (%1.2f, %1.2f)', tau.hat - 1.96 * se, tau.hat + 1.96 * se)
-plot(tau.hat)
-
-tau.hat2 = synthdid_estimate(setup$Y, setup$N0, setup$T0, omega.intercept = FALSE)
-se = sqrt(vcov(tau.hat2, method='placebo'))
-sprintf('point estimate: %1.2f', tau.hat2)
-sprintf('95%% CI (%1.2f, %1.2f)', tau.hat2 - 1.96 * se, tau.hat2 + 1.96 * se)
-plot(tau.hat2)
-
+#The information stored in truncated_hist_test_sdid is presented in Table 3
 
