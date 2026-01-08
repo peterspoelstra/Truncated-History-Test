@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use this code or data, please cite the following paper."
+authors:
+  - family-names: Spoelstra
+    given-names: Peter
+  - family-names: Stolp
+    given-names: Tom
+  - family-names: Golsteyn
+    given-names: Bart H. H.
+  - family-names: Cornelisz
+    given-names: Ilja
+  - family-names: van Klaveren
+    given-names: Chris
+title: "Truncated History Framework for Synthetic Control Approaches"
+journal: "Economics Letters"
+year: 2025
+volume: 257
+pages: "112701"
+doi: 10.1016/j.econlet.2025.112701
+url: https://doi.org/10.1016/j.econlet.2025.112701
