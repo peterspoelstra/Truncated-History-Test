@@ -30,6 +30,14 @@ This script is **not used in the published paper**, but is provided for illustra
 
 ---
 
+## Python implementation
+
+The **Truncated History Framework** is now also available as a Python function in the `mlsynth` package. This provides a direct way to apply the truncated history robustness check within Python-based synthetic control workflows.
+
+The implementation and documentation are available here:
+
+https://mlsynth.readthedocs.io/en/latest/truncated_history.html
+
 ## Citation
 
 If you use this code or data, please cite:
